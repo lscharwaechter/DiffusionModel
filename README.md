@@ -1,4 +1,4 @@
-# Diffusion Model For Image Generation
+# Diffusion Model
 
 In this project, a diffusion model is applied to artificially generate new images from a given dataset. The diffusion process is inspired by [[1]](#1) and [[2]](#2) and the code is based on the implementation of [this notebook](https://colab.research.google.com/drive/1sjy9odlSSy0RBVgMTgP7s99NXsqglsUL).
 

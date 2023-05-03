@@ -6,7 +6,9 @@ The model consists of a simplified UNet architecture with several convolutional 
 
 As an exemplary dataset, an image dataset for crater detection on Mars and Moon surface is used [[4]](#4). The training set consists of $98$ images, which are resized to a dimensionalty of $64 \times 64$, normalized to a range of $[-1,1]$.
 
+<p align="center">
 <img src="https://user-images.githubusercontent.com/56418155/235883817-275e5a76-12f1-4a4d-8307-c834f22c243f.png" alt="Overview_new" width="70%">
+</p>
 
 ## References
 <a id="1">[1]</a>

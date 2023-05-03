@@ -9,18 +9,18 @@ As an exemplary dataset, an image dataset for crater detection on Mars and Moon 
 ## References
 <a id="1">[1]</a>
 J. Ho et al. (2020), "Denoising Diffusion Probabilistic Models",
-34_{th} Conference on Neural Information Processing Systems (NeurIPS 2020)
-Available: [https://arxiv.org/abs/2006.11239](https://arxiv.org/abs/2006.11239)
+34_ Conference on Neural Information Processing Systems (NeurIPS 2020),
+Available: https://arxiv.org/abs/2006.11239
 
 <a id="2">[2]</a> 
 Dhariwal and Nichol (2021), "Diffusion Models Beat GANs on Image Synthesis",
-Advances in Neural Information Processing Systems 34 (NeurIPS 2021)
-Available: [https://arxiv.org/abs/2105.05233](https://arxiv.org/abs/2105.05233)
+Advances in Neural Information Processing Systems 34 (NeurIPS 2021),
+Available: https://arxiv.org/abs/2105.05233
 
 <a id="3">[3]</a> 
 A. Vaswani et al. (2017), “Attention is all you need”,
-Advances in Neural Information Processing Systems 30 (NeurIPS 2017)
-Available: [https://arxiv.org/abs/1706.03762](https://arxiv.org/abs/1706.03762)
+Advances in Neural Information Processing Systems 30 (NeurIPS 2017),
+Available: https://arxiv.org/abs/1706.03762
 
 <a id="4">[4]</a> 
 https://www.kaggle.com/datasets/lincolnzh/martianlunar-crater-detection-dataset

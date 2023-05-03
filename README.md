@@ -10,7 +10,7 @@ As an exemplary dataset, an image dataset for crater detection on Mars and Moon 
 <img src="https://user-images.githubusercontent.com/56418155/235883817-275e5a76-12f1-4a4d-8307-c834f22c243f.png" alt="Overview_new" width="70%">
 </p>
 
-The above images are generated after $500$ epochs with a batch size of $16$. Rough structures can be recognized, but they still lack sharp contours. A higher model complexity or number of epochs may improve the outcome.
+The above images are generated after $500$ epochs with a batch size of $16$. Rough structures can be recognized, but they still lack sharp contours. A higher model complexity or number of epochs may improve the current outcome.
 
 ## References
 <a id="1">[1]</a>

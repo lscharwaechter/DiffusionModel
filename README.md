@@ -15,7 +15,7 @@ The above images are generated after $500$ epochs with a batch size of $16$. Rou
 ## References
 <a id="1">[1]</a>
 J. Ho et al. (2020), "Denoising Diffusion Probabilistic Models",
-34_ Conference on Neural Information Processing Systems (NeurIPS 2020),
+34 Conference on Neural Information Processing Systems (NeurIPS 2020),
 Available: https://arxiv.org/abs/2006.11239
 
 <a id="2">[2]</a> 

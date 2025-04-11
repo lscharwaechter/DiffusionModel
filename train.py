@@ -85,7 +85,7 @@ def train(model, dataloader, optimizer, device, epochs):
     for epoch in range(epochs):
         for x, labels in dataloader:
             x = x.to(device)
-            prompts = [dataset.classes[label] for label in labels]
+            prompts = [dataset.classes[label] for label in labels] # either "moon" or "mars"
             text_inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True).to(device)
             text_embedding = text_model(**text_inputs).last_hidden_state[:, 0, :]
 

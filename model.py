@@ -46,7 +46,8 @@ class UNet(nn.Module):
         self.encoder2 = ResidualBlock(128, 128, time_emb_dim, text_emb_dim)
         self.down2 = nn.Conv2d(128, 256, 4, 2, 1)
         self.encoder3 = ResidualBlock(256, 256, time_emb_dim, text_emb_dim)
-        
+
+        # Bottleneck without skip connection
         self.middle = ResidualBlock(256, 256, time_emb_dim, text_emb_dim)
 
         # Decoder-Part

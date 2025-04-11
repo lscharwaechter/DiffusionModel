@@ -13,7 +13,7 @@ A conditional U-Net architecture processes noisy images along with a timestep em
 <img src="https://github.com/user-attachments/assets/a34df97b-b39c-4dc4-a725-af837846601f" alt="Overview_new" width="73%">
 </p>
 
-As an exemplary dataset, an image dataset for crater detection on Mars and Moon surface is used [[3]](#3). It consists of $142$ images in total, which are resized to a dimensionality of $64 \times 64$ and normalized to a value range of $[-1,1]$. The dataset is imbalanced, with roughly 5x more Mars images than Moon images. This was handled using a weighted sampling strategy to ensure equal representation during training. After 1000 epochs, the model generates news images by prompting either "moon" (left) or "mars" (right): 
+As an exemplary dataset, an image dataset for crater detection on Mars and Moon surface is used [[3]](#3). It consists of $142$ images in total, which are resized to a dimensionality of $64 \times 64$ and normalized to a value range of $[-1,1]$. The dataset is imbalanced, with roughly 5x more Mars images than Moon images. This was handled using a weighted sampling strategy to ensure equal representation during training. After 1000 epochs, the model generates new images by prompting either "moon" (left) or "mars" (right): 
 
 <p align="center">
 <img src="https://github.com/user-attachments/assets/d9ff2a3a-41f7-404f-8e5a-aa4daf96b557" alt="Overview_new" width="50%">

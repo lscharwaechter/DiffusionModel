@@ -19,7 +19,7 @@ As an exemplary dataset, an image dataset for crater detection on Mars and Moon 
 <img src="https://github.com/user-attachments/assets/d9ff2a3a-41f7-404f-8e5a-aa4daf96b557" alt="Overview_new" width="50%">
 </p>
 
-With only 142 total images, this model demonstrates that meaningful generative performance can be achieved even in small, highly specialized domains, especially when conditioning on compact semantic prompts. 
+With only 142 total images, this project demonstrates that meaningful generative performance can be achieved even in small, highly specialized domains, especially when conditioning on compact semantic prompts. 
 
 ## References
 <a id="1">[1]</a>

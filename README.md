@@ -3,7 +3,7 @@ In this project, a multi-modal text-conditioned image diffusion model is trained
 
 A conditional U-Net architecture processes noisy images along with a timestep embedding and a pretrained text embedding. The timestep and text features are injected into each residual block of the U-Net. The timestep is used to only predict the added noise at a certain level and immediately reconstruct the original image during training from that noise level, which is computationally more effective than passing each image into a full diffusion process involving all time steps (following the core DDPM approach). A DistilBERT language model is utilized to encode text prompts into a latent vector space. This vector is appended to the diffusion process and allows dynamic image generation from simple words like "mars" or even more elaborate phrases (future work). At inference, the model samples a random vector from a Gaussian Noise distribution and denoises it iteratively from T=500 to 0, using its learned noise predictions to recover a clean image step by step. The amount of noise added/reduced to the image is predefined by the betas vector $\beta_t$ and determines a linearly increasing amount of noise per time step. 
 
-<b>Number of channels in th U-Net:</b>
+<b>Number of channels in the U-Net:</b>
 - Input:	3 (RGB)
 - Encoder:	64 -> 128 -> 256
 - Decoder:	256 -> 128 -> 64

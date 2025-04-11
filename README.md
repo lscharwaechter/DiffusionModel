@@ -1,16 +1,25 @@
-# Diffusion Model
+# Text-conditioned Diffusion Model
+In this project, a multi-modal text-conditioned image diffusion model is trained to generate realistic crater images from short prompts like "mars" or "moon". The core idea builds upon the Denoising Diffusion Probabilistic Model (DDPM) framework introduced in [[1]](#1), leveraging a reverse denoising process to generate high-quality images from pure noise [[2]](#2).
 
-In this project, a diffusion model is applied to artificially generate new images from a given dataset. The diffusion process is inspired by [[1]](#1) and [[2]](#2) and the code is based on the implementation of [this notebook](https://colab.research.google.com/drive/1sjy9odlSSy0RBVgMTgP7s99NXsqglsUL).
+A conditional U-Net architecture processes noisy images along with a timestep embedding and a pretrained text embedding. The timestep and text features are injected into each residual block of the U-Net. The timestep is used to only predict the added noise at a certain level and immediately reconstruct the original image during training from that noise level, which is computationally more effective than passing each image into a full diffusion process involving all time steps (following the core DDPM approach). A DistilBERT language model is utilized to encode text prompts into a latent vector space. This vector is appended to the diffusion process and allows dynamic image generation from simple words like "mars" or even more elaborate phrases (future work). At inference, the model samples a random vector from a Gaussian Noise distribution and denoises it iteratively from T=500 to 0, using its learned noise predictions to recover a clean image step by step. The amount of noise added/reduced to the image is predefined by the betas vector $\beta_t$ and determines a linearly increasing amount of noise per time step. 
 
-The model consists of a simplified UNet architecture with several convolutional blocks and residual connections. Instead of a full diffusion process, each image is assigned a random time step value that is passed to the model together with the image. A Positional Encoding layer embeds the time step into a vector of sines and cosines (as in the Transformer architecture [[3]](#3)). During training, a batch of images is transformed into its noisy version, where the degree of noise is estimated using the assigned diffusion time stamp. The model then learns to predict the added noise levels of the input batch. The loss function compares the predicted noise levels with the true noise levels, while the gradients are used to minimize this difference. This strategy is computationally more effective than passing each image into a full diffusion process involving all time steps. During inference however, the model is given a random noise Tensor which runs through the whole diffusion process reversely: Starting with the last time step, the noise Tensor is passed as an image to the model and the predicted noise level is then substracted from the image. This is done interatively until the first timestep is reached, which represents a generated, noiseless image. The amount of noise added/reduced to the image is predefined by the betas vector $\beta_t$ and determines a linearly increasing amount of noise per time step. 
-
-As an exemplary dataset, an image dataset for crater detection on Mars and Moon surface is used [[4]](#4). The training set consists of $98$ images, which are resized to a dimensionality of $64 \times 64$ and normalized to a value range of $[-1,1]$.
+Number of channels in th U-Net:
+- Input:	3 (RGB)
+- Encoder:	64 -> 128 -> 256
+- Decoder:	256 -> 128 -> 64
+- Output: 3 (RGB)
 
 <p align="center">
-<img src="https://user-images.githubusercontent.com/56418155/235883817-275e5a76-12f1-4a4d-8307-c834f22c243f.png" alt="Overview_new" width="70%">
+<img src="https://github.com/user-attachments/assets/a34df97b-b39c-4dc4-a725-af837846601f" alt="Overview_new" width="73%">
 </p>
 
-The above images are generated after $500$ epochs with a batch size of $16$. Rough structures can be recognized, but they lack sharp contours. A higher model complexity or number of epochs may improve the current outcome.
+As an exemplary small dataset, an image dataset for crater detection on Mars and Moon surface is used [[3]](#3). It consists of $142$ images in total, which are resized to a dimensionality of $64 \times 64$ and normalized to a value range of $[-1,1]$. The dataset is imbalanced, with roughly 5x more Mars images than Moon images. This was handled using a weighted sampling strategy to ensure equal representation during training. After 1000 epochs, the model generates images by prompting either "moon" (left) or "mars" (right): 
+
+<p align="center">
+<img src="https://github.com/user-attachments/assets/d9ff2a3a-41f7-404f-8e5a-aa4daf96b557" alt="Overview_new" width="50%">
+</p>
+
+With only 142 total images, this model demonstrates that meaningful generative performance can be achieved even in small, highly specialized domains, especially when conditioning on compact semantic prompts. 
 
 ## References
 <a id="1">[1]</a>
@@ -24,9 +33,4 @@ Advances in Neural Information Processing Systems 34 (NeurIPS 2021),
 Available: https://arxiv.org/abs/2105.05233
 
 <a id="3">[3]</a> 
-A. Vaswani et al. (2017), “Attention is all you need”,
-Advances in Neural Information Processing Systems 30 (NeurIPS 2017),
-Available: https://arxiv.org/abs/1706.03762
-
-<a id="4">[4]</a> 
 https://www.kaggle.com/datasets/lincolnzh/martianlunar-crater-detection-dataset

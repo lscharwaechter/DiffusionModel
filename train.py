@@ -1,200 +1,123 @@
-# -*- coding: utf-8 -*-
-
 import torch
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision.datasets import ImageFolder
-
+from torchvision import transforms, utils
 import matplotlib.pyplot as plt
-from model import SimpleUnet
+from transformers import AutoTokenizer, AutoModel
+from models import UNet
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+# Load Dataset and Transform
+data_dir = str('/craters')
+'''
+Needs to have the following folder structure:
+    /craters
+        /mars
+        /moon
+'''
 
-# Hyperparameters
-IMG_SIZE = 64
-BATCH_SIZE = 16
-EPOCHS = 500
-LR = 0.001
-
-def beta_schedule(timesteps, start=0.0001, end=0.02):
-    '''
-    Returns a schedule of the betas for a given amount of timesteps.
-    In this example a linear scheduler is used.
-    '''
-    return torch.linspace(start, end, timesteps)
-
-def get_index_from_list(vals, t, x_shape):
-    """ 
-    Returns a specific index t of a passed list of values vals
-    while considering the batch dimension.
-    """
-    batch_size = t.shape[0]
-    out = vals.gather(-1, t.cpu())
-    return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
-
-def forward_diffusion_sample(x_0, t, device=device):
-    """ 
-    Takes an image and a timestep as input and 
-    returns the noisy version of it
-    """
-    noise = torch.randn_like(x_0)
-    sqrt_alphas_cumprod_t = get_index_from_list(sqrt_alphas_cumprod, t, x_0.shape)
-    sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
-        sqrt_one_minus_alphas_cumprod, t, x_0.shape
-    )
-    # mean, variance
-    return sqrt_alphas_cumprod_t.to(device) * x_0.to(device) \
-    + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)
-
-
-# Define beta schedule
-T = 300
-betas = beta_schedule(timesteps=T)
-
-# Pre-calculate different terms for the closed form
-alphas = 1. - betas
-alphas_cumprod = torch.cumprod(alphas, axis=0)
-alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
-sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
-sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
-sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - alphas_cumprod)
-posterior_variance = betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
-
-#%%
-
-# Define image transformations
 transform = transforms.Compose([
-    transforms.Resize((IMG_SIZE, IMG_SIZE)),
+    transforms.Resize((64, 64)),
     transforms.ToTensor(),
-    transforms.Lambda(lambda t: (t * 2) - 1)
+    transforms.Normalize([0.5], [0.5])
 ])
 
-# Load the dataset from the "craters" folder
-dataset = ImageFolder('craters', transform=transform)
+dataset = ImageFolder(data_dir, transform=transform)
+num_classes = len(dataset.classes)
 
-# Define the data loader with a batch size of 16
-dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+# Handle imbalance with weighted sampling
+class_counts = [0] * num_classes
+for _, label in dataset.samples:
+    class_counts[label] += 1
+class_weights = [1.0 / count for count in class_counts]
+sample_weights = [class_weights[label] for _, label in dataset.samples]
+sampler = WeightedRandomSampler(sample_weights, num_samples=len(sample_weights), replacement=True)
+dataloader = DataLoader(dataset, batch_size=16, sampler=sampler)
 
-#%%
+# Load DistilBERT Text Encoder
+tokenizer = AutoTokenizer.from_pretrained("distilbert/distilbert-base-uncased")
+text_model = AutoModel.from_pretrained("distilbert/distilbert-base-uncased")
+raw_text_dim = 768
+text_emb_dim = 256
 
-# Plot exemplary forward diffusion
-image = next(iter(dataloader))[0]
-plt.figure(figsize=(15,15))
-num_images = 10
-stepsize = int(T/num_images)
+# Parameters for the Diffusion Process
+T = 500
+beta_start = 1e-4
+beta_end = 0.02
+betas = torch.linspace(beta_start, beta_end, T)
+alphas = 1. - betas
+alpha_hats = torch.cumprod(alphas, dim=0)
 
-def show_image(image: torch.Tensor):
-    # In case there is a batch dimension, take the first image
-    if len(image.shape) == 4:
-        image = image[0, :, :, :] 
-    image = (image+1)/2
-    image = torch.clamp(image,min=0,max=1).permute(1,2,0)
-    plt.imshow(image) 
-
-for idx in range(0, T, stepsize):
-    t = torch.Tensor([idx]).type(torch.int64)
-    plt.subplot(1, num_images+1, int(idx/stepsize) + 1)
-    img, noise = forward_diffusion_sample(image, t)
-    show_image(img)
-    plt.axis('off')
-    
-#%%
-
-# Plot existing images of the dataset
-plt.figure(figsize=(15,15))
-for idx in range(0, T, stepsize):
-    t = torch.Tensor([idx]).type(torch.int64)
-    plt.subplot(1, num_images+1, int(idx/stepsize) + 1)
-    img = next(iter(dataloader))[0]
-    show_image(img)
-    plt.axis('off')
-
-#%%
-
+# Sample random images from noise using prompts
 @torch.no_grad()
-def sample_timestep(x, t):
-    """
-    Calls the model to predict the noise in the image and returns 
-    the denoised image. 
-    Applies noise to this image, if we are not in the last step yet.
-    """
-    betas_t = get_index_from_list(betas, t, x.shape)
-    sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
-        sqrt_one_minus_alphas_cumprod, t, x.shape
-    )
-    sqrt_recip_alphas_t = get_index_from_list(sqrt_recip_alphas, t, x.shape)
-    
-    # Call model (substract the noise prediction from the current image
-    # with the beta weighting) to get the pixel mean
-    model_mean = sqrt_recip_alphas_t * (
-        x - betas_t * model(x, t) / sqrt_one_minus_alphas_cumprod_t
-    )
-    # get the predefined noise variance for the given timestep
-    posterior_variance_t = get_index_from_list(posterior_variance, t, x.shape)
-    
-    # The first timestep should be noiseless
-    if t == 0:
-        return model_mean
-    else:
-        noise = torch.randn_like(x)
-        return model_mean + torch.sqrt(posterior_variance_t) * noise 
+def sample(model, device, prompt, n=16):
+    model.eval()
+    x = torch.randn(n, 3, 64, 64).to(device)
+    text_inputs = tokenizer([prompt], return_tensors="pt", padding=True, truncation=True).to(device)
+    text_embedding = text_model(**text_inputs).last_hidden_state[:, 0, :].repeat(n, 1)
 
-@torch.no_grad()
-def sample_plot_image():
-    '''
-    Samples a noise vector and iteratively reduces the noise every
-    timestep to generate an image 
-    '''
-    
-    img_size = IMG_SIZE
-    img = torch.randn((1, 3, img_size, img_size), device=device)
-    plt.figure(figsize=(15,15))
+    for t in reversed(range(T)):
+        t_tensor = torch.tensor([t / T], device=device).repeat(n, 1)
+        pred_noise = model(x, t_tensor, text_embedding)
+        beta_t = betas[t].to(device)
+        alpha_t = alphas[t].to(device)
+        alpha_hat_t = alpha_hats[t].to(device)
+        if t > 0:
+            noise = torch.randn_like(x)
+        else:
+            noise = 0
+        x = (1 / alpha_t.sqrt()) * (x - ((1 - alpha_t) / (1 - alpha_hat_t).sqrt()) * pred_noise) + beta_t.sqrt() * noise
+    return x
+
+# Visualize the sampled images
+def plot_samples(samples, title=""):
+    samples = samples.cpu().clamp(-1, 1)
+    grid = utils.make_grid(samples, nrow=4, normalize=True)
+    plt.figure(figsize=(8, 8))
     plt.axis('off')
-    num_images = 10
-    stepsize = int(T/num_images)
+    plt.title(title)
+    plt.imshow(grid.permute(1, 2, 0))
+    plt.show()
 
-    for i in reversed(range(0,T)):
-        t = torch.full((1,), i, device=device, dtype=torch.long)
-        img = sample_timestep(img, t)
-        img = torch.clamp(img, -1.0, 1.0)
-        if i % stepsize == 0:
-            plt.subplot(1, num_images, int(i/stepsize)+1)
-            show_image(img.detach().cpu())
-    plt.show()            
+# Training
+def train(model, dataloader, optimizer, device, epochs):
+    model.train()
+    for epoch in range(epochs):
+        for x, labels in dataloader:
+            x = x.to(device)
+            prompts = [dataset.classes[label] for label in labels]
+            text_inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True).to(device)
+            text_embedding = text_model(**text_inputs).last_hidden_state[:, 0, :]
 
-#%%
+            t = torch.randint(0, T, (x.size(0),), device=device).long()
+            noise = torch.randn_like(x)
+            alpha_hat_t = alpha_hats.to(device)[t].view(-1, 1, 1, 1)
+            noisy_x = (alpha_hat_t.sqrt() * x + (1 - alpha_hat_t).sqrt() * noise)
 
-def loss_L1(model, x_0, t):
-    '''
-    This function estimates the predicted noise level of input x_0 at timestep
-    t, compares the prediction with the true added noise and returns
-    the L1 loss between both levels.
-    '''
-    x_noisy, noise = forward_diffusion_sample(x_0, t, device)
-    noise_pred = model(x_noisy, t)
-    return F.l1_loss(noise, noise_pred)
+            pred_noise = model(noisy_x, t.float().unsqueeze(-1) / T, text_embedding)
+            loss = F.mse_loss(pred_noise, noise)
 
-#%%
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-model = SimpleUnet()
-model.to(device)
-optimizer = optim.Adam(model.parameters(), lr=LR)
+        print(f"Epoch {epoch + 1}: Loss = {loss.item():.4f}")
 
-for epoch in range(EPOCHS):
-    for step, batch in enumerate(dataloader):
-      optimizer.zero_grad()
+        if (epoch + 1) % 50 == 0:
+            print(f"\n[Epoch {epoch + 1}] Sampling 'mars'...")
+            mars_samples = sample(model, device, prompt="mars")
+            plot_samples(mars_samples, title=f"Mars - Epoch {epoch + 1}")
 
-      t = torch.randint(0, T, (BATCH_SIZE,), device=device).long()
-      
-      if batch[0].shape[0] == BATCH_SIZE:
-          loss = loss_L1(model, batch[0], t)
-          loss.backward()
-          optimizer.step()
+            print(f"\n[Epoch {epoch + 1}] Sampling 'moon'...")
+            moon_samples = sample(model, device, prompt="moon")
+            plot_samples(moon_samples, title=f"Moon - Epoch {epoch + 1}")
 
-      if epoch % 5 == 0 and step == 0:
-        print(f"Epoch {epoch} | step {step:03d} Loss: {loss.item()} ")
-        sample_plot_image()
-
-torch.save(model.state_dict(), "diffusion_model.pth")
+# Run Training
+if __name__ == '__main__':
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    text_model = text_model.to(device)
+    model = UNet().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    train(model, dataloader, optimizer, device, epochs=1000)
+    # Save model
+    torch.save(model.state_dict(), "text_crater_diffusion.pt")

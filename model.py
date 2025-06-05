@@ -48,7 +48,7 @@ class UNet(nn.Module):
         self.encoder3 = ResidualBlock(256, 256, time_emb_dim, text_emb_dim)
 
         # Bottleneck without skip connection
-        self.middle = ResidualBlock(256, 256, time_emb_dim, text_emb_dim)
+        self.bottleneck = ResidualBlock(256, 256, time_emb_dim, text_emb_dim)
 
         # Decoder-Part
         self.up2 = nn.ConvTranspose2d(256, 128, 4, 2, 1)
@@ -66,7 +66,7 @@ class UNet(nn.Module):
         x2 = self.encoder2(self.down1(x1), t, text)
         x3 = self.encoder3(self.down2(x2), t, text)
 
-        x_mid = self.middle(x3, t, text)
+        x_mid = self.bottleneck(x3, t, text)
 
         x = self.decoder2(torch.cat([self.up2(x_mid), x2], dim=1), t, text)
         x = self.decoder1(torch.cat([self.up1(x), x1], dim=1), t, text)
